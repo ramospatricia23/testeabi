@@ -16,6 +16,16 @@
     <style>
         html, body {
             background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 0;
         }
         .ol-control > * {
             background-color: #f8f8f8!important;
@@ -37,22 +47,26 @@
         }
     </style>
 
-    <style>
-        html, body, #map {
-            width: 100%;
-            height: 100%;
-            padding: 0;
-            margin: 0;
-        }
-    </style>
-
     <title>Mapa com Busca</title>
 </head>
 <body>
 
-    <!-- Campo de busca e botão -->
-    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000; display: flex; gap: 4px;">
-      <input id="busca-endereco" type="text" placeholder="Buscar endereço..." style="width: 280px; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
+    <!-- Container da busca, fora do mapa -->
+    <div id="busca-container" style="
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1500;
+        background: rgba(255,255,255,0.95);
+        padding: 6px 8px;
+        border-radius: 6px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        max-width: 320px;
+    ">
+      <input id="busca-endereco" type="text" placeholder="Buscar endereço..." style="flex-grow:1; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
       <button id="btn-buscar" style="padding: 6px 12px; font-size: 14px; cursor: pointer;">Buscar</button>
     </div>
 
@@ -81,9 +95,6 @@
     <script src="./resources/qgis2web.js"></script>
 
     <script>
-      // Aguarde o mapa estar pronto se necessário (depende do seu qgis2web.js)
-      // Aqui assumo que a variável global 'map' existe
-
       const input = document.getElementById('busca-endereco');
       const btnBuscar = document.getElementById('btn-buscar');
 
