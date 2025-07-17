@@ -1,167 +1,70 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+  const input = document.getElementById('busca-endereco');
+  const btnBuscar = document.getElementById('btn-buscar');
 
-    <link rel="stylesheet" href="./resources/ol.css">
-    <link rel="stylesheet" href="resources/fontawesome-all.min.css">
-    <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
-    <link rel="stylesheet" href="./resources/qgis2web.css">
+  function buscarEndereco() {
+    const query = input.value.trim();
+    if (!query) return alert('Digite um endereço para buscar.');
 
-    <style>
-        html, body {
-            background-color: #ffffff;
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
+    // URL da API Nominatim (OpenStreetMap)
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&accept-language=pt`;
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (!data || data.length === 0) {
+          alert('Endereço não encontrado.');
+          return;
         }
-        #map {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            z-index: 0;
-        }
-        .ol-control > * {
-            background-color: #f8f8f8!important;
-            color: #444444!important;
-            border-radius: 0px;
-        }
-        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
-            color: #444444!important;
-        }
-        .search-layer-input-search {
-            background-color: #f8f8f8!important;
-        }
-        .ol-control > *:focus, .ol-control >*:hover {
-            background-color: rgba(248, 248, 248, 0.7)!important;
-        } 
-        .ol-control {
-            background-color: rgba(255,255,255,.4) !important;
-            padding: 2px !important;
-        }
-    </style>
 
-    <title>Mapa com Busca</title>
-</head>
-<body>
+        const result = data[0];
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const coord = ol.proj.fromLonLat([lon, lat]);
 
-    <!-- Container da busca, fora do mapa -->
-    <div id="busca-container" style="
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1500;
-        background: rgba(255,255,255,0.95);
-        padding: 6px 8px;
-        border-radius: 6px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        max-width: 320px;
-    ">
-      <input id="busca-endereco" type="text" placeholder="Buscar endereço..." style="flex-grow:1; padding: 6px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;">
-      <button id="btn-buscar" style="padding: 6px 12px; font-size: 14px; cursor: pointer;">Buscar</button>
-    </div>
+        // Centraliza e dá zoom
+        map.getView().animate({ center: coord, zoom: 16 });
 
-    <div id="map">
-        <div id="popup" class="ol-popup">
-            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-            <div id="popup-content"></div>
-        </div>
-    </div>
+        // Remove marcador antigo, se houver
+        map.getLayers().getArray().forEach(layer => {
+          if (layer.get('name') === 'buscaEndereco') {
+            map.removeLayer(layer);
+          }
+        });
 
-    <script src="resources/qgis2web_expressions.js"></script>
-    <script src="resources/proj4.js"></script>
-    <script>
-      proj4.defs('EPSG:4674','+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs');
-    </script>
-    <script src="./resources/functions.js"></script>
-    <script src="./resources/ol.js"></script>
-    <script src="./resources/ol-layerswitcher.js"></script>
-    <script src="resources/photon-geocoder-autocomplete.min.js"></script>
-    <script src="layers/apa1copiar_1.js"></script>
-    <script src="layers/apa1_2.js"></script>
-    <script src="styles/apa1copiar_1_style.js"></script>
-    <script src="styles/apa1_2_style.js"></script>
-    <script src="./layers/layers.js" type="text/javascript"></script> 
-    <script src="./resources/Autolinker.min.js"></script>
-    <script src="./resources/qgis2web.js"></script>
+        // Cria marcador vermelho
+        const marker = new ol.Feature({
+          geometry: new ol.geom.Point(coord)
+        });
 
-    <script>
-      const input = document.getElementById('busca-endereco');
-      const btnBuscar = document.getElementById('btn-buscar');
+        const vectorSource = new ol.source.Vector({
+          features: [marker]
+        });
 
-      function buscarEndereco() {
-        const query = input.value.trim();
-        if (!query) return alert('Digite um endereço para buscar.');
-
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&lang=pt`;
-
-        fetch(url)
-          .then(response => response.json())
-          .then(data => {
-            if (!data.features || data.features.length === 0) {
-              alert('Endereço não encontrado.');
-              return;
-            }
-
-            const feature = data.features[0];
-            const [lon, lat] = feature.geometry.coordinates;
-            const coord = ol.proj.fromLonLat([lon, lat]);
-
-            // Centraliza e dá zoom
-            map.getView().animate({ center: coord, zoom: 16 });
-
-            // Remove marcador antigo, se houver
-            map.getLayers().getArray().forEach(layer => {
-              if (layer.get('name') === 'buscaEndereco') {
-                map.removeLayer(layer);
-              }
-            });
-
-            // Cria marcador vermelho
-            const marker = new ol.Feature({
-              geometry: new ol.geom.Point(coord)
-            });
-
-            const vectorSource = new ol.source.Vector({
-              features: [marker]
-            });
-
-            const markerLayer = new ol.layer.Vector({
-              source: vectorSource,
-              style: new ol.style.Style({
-                image: new ol.style.Circle({
-                  radius: 6,
-                  fill: new ol.style.Fill({ color: 'red' }),
-                  stroke: new ol.style.Stroke({ color: '#fff', width: 2 })
-                })
-              })
-            });
-
-            markerLayer.set('name', 'buscaEndereco');
-            map.addLayer(markerLayer);
+        const markerLayer = new ol.layer.Vector({
+          source: vectorSource,
+          style: new ol.style.Style({
+            image: new ol.style.Circle({
+              radius: 6,
+              fill: new ol.style.Fill({ color: 'red' }),
+              stroke: new ol.style.Stroke({ color: '#fff', width: 2 })
+            })
           })
-          .catch(err => {
-            console.error('Erro na busca:', err);
-            alert('Erro ao buscar endereço. Tente novamente.');
-          });
-      }
+        });
 
-      btnBuscar.addEventListener('click', buscarEndereco);
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          buscarEndereco();
-        }
+        markerLayer.set('name', 'buscaEndereco');
+        map.addLayer(markerLayer);
+      })
+      .catch(err => {
+        console.error('Erro na busca:', err);
+        alert('Erro ao buscar endereço. Tente novamente.');
       });
-    </script>
+  }
 
-</body>
-</html>
+  btnBuscar.addEventListener('click', buscarEndereco);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      buscarEndereco();
+    }
+  });
+</script>
