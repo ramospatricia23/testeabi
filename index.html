@@ -1,144 +1,79 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-br">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-
-  <link rel="stylesheet" href="./resources/ol.css" />
-  <link rel="stylesheet" href="resources/fontawesome-all.min.css" />
-  <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="./resources/ol-layerswitcher.css" />
-  <link rel="stylesheet" href="./resources/qgis2web.css" />
-
+  <title>Mapa básico com busca LocationIQ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol/ol.css" />
   <style>
-    html,
-    body {
-      background-color: #ffffff;
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
+    html, body, #map {
+      margin: 0; padding: 0; width: 100%; height: 100%;
     }
-    #map {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      z-index: 0;
-    }
-    .ol-control > * {
-      background-color: #f8f8f8 !important;
-      color: #444444 !important;
-      border-radius: 0px;
-    }
-    .ol-attribution a,
-    .gcd-gl-input::placeholder,
-    .search-layer-input-search::placeholder {
-      color: #444444 !important;
-    }
-    .search-layer-input-search {
-      background-color: #f8f8f8 !important;
-    }
-    .ol-control > *:focus,
-    .ol-control > *:hover {
-      background-color: rgba(248, 248, 248, 0.7) !important;
-    }
-    .ol-control {
-      background-color: rgba(255, 255, 255, 0.4) !important;
-      padding: 2px !important;
-    }
-  </style>
-
-  <title>Mapa com Busca</title>
-</head>
-<body>
-  <!-- Container da busca -->
-  <div
-    id="busca-container"
-    style="
+    #busca-container {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1500;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 6px 8px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+      top: 10px; left: 10px; z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 8px;
+      border-radius: 5px;
       display: flex;
       gap: 6px;
-      align-items: center;
-      max-width: 320px;
-    "
-  >
-    <input
-      id="busca-endereco"
-      type="text"
-      placeholder="Buscar endereço..."
-      style="
-        flex-grow: 1;
-        padding: 6px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      "
-    />
-    <button
-      id="btn-buscar"
-      style="padding: 6px 12px; font-size: 14px; cursor: pointer"
-    >
-      Buscar
-    </button>
+    }
+    #busca-endereco {
+      width: 250px;
+      padding: 6px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #btn-buscar {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="busca-container">
+    <input type="text" id="busca-endereco" placeholder="Digite um endereço" />
+    <button id="btn-buscar">Buscar</button>
   </div>
 
-  <div id="map">
-    <div id="popup" class="ol-popup">
-      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-      <div id="popup-content"></div>
-    </div>
-  </div>
+  <div id="map"></div>
 
-  <script src="resources/qgis2web_expressions.js"></script>
-  <script src="resources/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ol/ol.js"></script>
   <script>
-    proj4.defs(
-      "EPSG:4674",
-      "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"
-    );
-  </script>
-  <script src="./resources/functions.js"></script>
-  <script src="./resources/ol.js"></script>
-  <script src="./resources/ol-layerswitcher.js"></script>
-  <script src="resources/photon-geocoder-autocomplete.min.js"></script>
-  <script src="layers/apa1copiar_1.js"></script>
-  <script src="layers/apa1_2.js"></script>
-  <script src="styles/apa1copiar_1_style.js"></script>
-  <script src="styles/apa1_2_style.js"></script>
-  <script src="./layers/layers.js" type="text/javascript"></script>
-  <script src="./resources/Autolinker.min.js"></script>
-  <script src="./resources/qgis2web.js"></script>
+    // Cria o mapa básico
+    const map = new ol.Map({
+      target: 'map',
+      layers: [
+        new ol.layer.Tile({
+          source: new ol.source.OSM()
+        })
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-49.27, -25.43]), // Centro Curitiba
+        zoom: 12
+      })
+    });
 
-  <script>
-    const input = document.getElementById("busca-endereco");
-    const btnBuscar = document.getElementById("btn-buscar");
+    // Variáveis da busca
+    const input = document.getElementById('busca-endereco');
+    const btnBuscar = document.getElementById('btn-buscar');
+    const LOCATIONIQ_API_KEY = 'pk.1e36e462fd1e41a8fbd04b87e4fef5ed'; // Sua chave LocationIQ
 
-    // Sua chave LocationIQ
-    const LOCATIONIQ_API_KEY = "pk.1e36e462fd1e41a8fbd04b87e4fef5ed";
+    let markerLayer = null;
 
     function buscarEndereco() {
       const query = input.value.trim();
-      if (!query) return alert("Digite um endereço para buscar.");
+      if (!query) return alert('Digite um endereço para buscar.');
 
-      const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(
-        query
-      )}&format=json&limit=1&addressdetails=1`;
+      const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`;
 
       fetch(url)
-        .then((response) => response.json())
-        .then((data) => {
+        .then(res => res.json())
+        .then(data => {
           if (!data || data.error || data.length === 0) {
-            alert("Endereço não encontrado.");
+            alert('Endereço não encontrado.');
             return;
           }
 
@@ -147,48 +82,45 @@
           const lon = parseFloat(result.lon);
           const coord = ol.proj.fromLonLat([lon, lat]);
 
+          // Centraliza e dá zoom
           map.getView().animate({ center: coord, zoom: 16 });
 
-          // Remove marcador antigo, se houver
-          map.getLayers()
-            .getArray()
-            .forEach((layer) => {
-              if (layer.get("name") === "buscaEndereco") {
-                map.removeLayer(layer);
-              }
-            });
+          // Remove marcador antigo
+          if (markerLayer) {
+            map.removeLayer(markerLayer);
+          }
 
+          // Cria marcador vermelho
           const marker = new ol.Feature({
-            geometry: new ol.geom.Point(coord),
+            geometry: new ol.geom.Point(coord)
           });
 
           const vectorSource = new ol.source.Vector({
-            features: [marker],
+            features: [marker]
           });
 
-          const markerLayer = new ol.layer.Vector({
+          markerLayer = new ol.layer.Vector({
             source: vectorSource,
             style: new ol.style.Style({
               image: new ol.style.Circle({
-                radius: 6,
-                fill: new ol.style.Fill({ color: "red" }),
-                stroke: new ol.style.Stroke({ color: "#fff", width: 2 }),
-              }),
-            }),
+                radius: 7,
+                fill: new ol.style.Fill({ color: 'red' }),
+                stroke: new ol.style.Stroke({ color: '#fff', width: 2 })
+              })
+            })
           });
 
-          markerLayer.set("name", "buscaEndereco");
           map.addLayer(markerLayer);
         })
-        .catch((err) => {
-          console.error("Erro na busca:", err);
-          alert("Erro ao buscar endereço. Tente novamente.");
+        .catch(err => {
+          console.error('Erro na busca:', err);
+          alert('Erro ao buscar endereço. Tente novamente.');
         });
     }
 
-    btnBuscar.addEventListener("click", buscarEndereco);
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
+    btnBuscar.addEventListener('click', buscarEndereco);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
         buscarEndereco();
       }
     });
