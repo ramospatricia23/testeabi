@@ -1,8 +1,8 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <title>Mapa básico com busca LocationIQ</title>
+  <meta charset="UTF-8" />
+  <title>Mapa com Busca LocationIQ Simplificado</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol/ol.css" />
   <style>
@@ -12,7 +12,7 @@
     #busca-container {
       position: absolute;
       top: 10px; left: 10px; z-index: 1000;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.95);
       padding: 8px;
       border-radius: 5px;
       display: flex;
@@ -42,32 +42,29 @@
 
   <script src="https://cdn.jsdelivr.net/npm/ol/ol.js"></script>
   <script>
-    // Cria o mapa básico
     const map = new ol.Map({
       target: 'map',
-      layers: [
-        new ol.layer.Tile({
-          source: new ol.source.OSM()
-        })
-      ],
+      layers: [ new ol.layer.Tile({ source: new ol.source.OSM() }) ],
       view: new ol.View({
-        center: ol.proj.fromLonLat([-49.27, -25.43]), // Centro Curitiba
+        center: ol.proj.fromLonLat([-49.27, -25.43]),
         zoom: 12
       })
     });
 
-    // Variáveis da busca
     const input = document.getElementById('busca-endereco');
     const btnBuscar = document.getElementById('btn-buscar');
-    const LOCATIONIQ_API_KEY = 'pk.1e36e462fd1e41a8fbd04b87e4fef5ed'; // Sua chave LocationIQ
+    const LOCATIONIQ_API_KEY = 'pk.1e36e462fd1e41a8fbd04b87e4fef5ed'; // sua chave LocationIQ
 
     let markerLayer = null;
 
     function buscarEndereco() {
       const query = input.value.trim();
-      if (!query) return alert('Digite um endereço para buscar.');
+      if (!query) {
+        alert('Digite um endereço para buscar.');
+        return;
+      }
 
-      const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`;
+      const url = `https://us1.locationiq.com/v1/search.php?key=${LOCATIONIQ_API_KEY}&q=${encodeURIComponent(query)}&format=json&limit=1`;
 
       fetch(url)
         .then(res => res.json())
@@ -82,15 +79,12 @@
           const lon = parseFloat(result.lon);
           const coord = ol.proj.fromLonLat([lon, lat]);
 
-          // Centraliza e dá zoom
           map.getView().animate({ center: coord, zoom: 16 });
 
-          // Remove marcador antigo
           if (markerLayer) {
             map.removeLayer(markerLayer);
           }
 
-          // Cria marcador vermelho
           const marker = new ol.Feature({
             geometry: new ol.geom.Point(coord)
           });
